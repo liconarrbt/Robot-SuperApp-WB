@@ -35,3 +35,6 @@ Screenshots-Temp/*
 !Screenshots-Temp/.gitkeep
 screenshots/
 
+# Sesiones
+.config/*
+!.config/.gitkeep
