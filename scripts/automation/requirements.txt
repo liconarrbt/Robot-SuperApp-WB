@@ -1,0 +1,5 @@
+pure-python-adb>=0.3.0.dev0
+pyserial>=3.5
+pynmea2>=1.19.0
+schedule>=1.2.0
+python-dotenv>=1.0.0

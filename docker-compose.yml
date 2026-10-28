@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  redroid:
+    image: redroid/redroid:11.0.0-latest
+    container_name: redroid-gps
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "5555:5555" # ADB port
+    volumes:
+      - ./data:/data
+    devices:
+      # VK-162 USB GPS passthrough
+      # Ajustar si en tu sistema se detecta como /dev/ttyUSB0 o /dev/ttyACM0
+      - /dev/ttyACM0:/dev/ttyACM0:rwm
+    command:
+      - androidboot.redroid_width=720
+      - androidboot.redroid_height=1280
+      - androidboot.redroid_dpi=320
+      - androidboot.redroid_gpu_mode=guest
+      # Habilitar soporte GPS serial en el kernel/AOSP HAL si está disponible
+      - ro.kernel.android.gps=ttyACM0
+      - ro.kernel.android.gps.speed=9600
+
+  # Opcional: Interfaz Web para ver y controlar la pantalla (scrcpy web)
+  # redroid-web:
+  #   image: remote-android/redroid-web:latest
+  #   container_name: redroid-web
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - REDROID_HOST=redroid
+  #     - REDROID_PORT=5555
+  #   depends_on:
+  #     - redroid

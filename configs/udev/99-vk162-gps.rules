@@ -1,0 +1,7 @@
+# Regla udev para módulo GPS USB VK-162 (u-blox 7)
+# Identifica el dispositivo por Vendor ID y Product ID habituales de u-blox (1546:01a7) o Prolific/Silicon Labs si usa conversor UART
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a7", SYMLINK+="gps_vk162", MODE="0666"
+
+# Regla de fallback para puertos ACM y USB seriales genéricos con permisos de lectura/escritura
+KERNEL=="ttyACM[0-9]*", MODE="0666"
+KERNEL=="ttyUSB[0-9]*", MODE="0666"
