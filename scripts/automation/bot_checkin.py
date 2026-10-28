@@ -11,11 +11,11 @@ import time
 import subprocess
 from datetime import datetime
 
-# Parámetros por defecto (se pueden sobreescribir con variables de entorno)
+# Parámetros por defecto para Workbeat
 ADB_HOST = os.getenv("ADB_HOST", "127.0.0.1")
 ADB_PORT = os.getenv("ADB_PORT", "5555")
-TARGET_PACKAGE = os.getenv("TARGET_PACKAGE", "com.example.superapp")
-TARGET_ACTIVITY = os.getenv("TARGET_ACTIVITY", "com.example.superapp.MainActivity")
+TARGET_PACKAGE = os.getenv("TARGET_PACKAGE", "com.workbeatmobile")
+TARGET_ACTIVITY = os.getenv("TARGET_ACTIVITY", "com.superappworkbeat.MainActivity")
 
 def run_adb(cmd: list) -> str:
     full_cmd = ["adb", "-s", f"{ADB_HOST}:{ADB_PORT}"] + cmd
