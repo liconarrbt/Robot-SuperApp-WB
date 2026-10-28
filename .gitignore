@@ -29,3 +29,9 @@ android_data/
 !app/*.apk.example
 credentials.json
 .env
+
+# Screenshots
+Screenshots-Temp/*
+!Screenshots-Temp/.gitkeep
+screenshots/
+
