@@ -38,3 +38,4 @@ screenshots/
 # Sesiones
 .config/*
 !.config/.gitkeep
+!.config/*.example

@@ -1,0 +1,4 @@
+USER: PINTACOMEX\0000000
+PASS: TuPassword123/
+# Segundos de espera tras pulsar el botón de checada
+SCREENSHOT_DELAY: 5
