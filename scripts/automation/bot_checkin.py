@@ -182,6 +182,16 @@ def capture_screenshot(tag: str, screenshot_dir: str, device: str = None):
     print(f"  [📸 Captura] Guardada en: {local_path}")
     return local_path
 
+def sync_gps_location(device: str = None):
+    """Inyecta la última posición del GPS físico o gpsd hacia ReDroid."""
+    try:
+        feeder_script = os.path.join(os.path.dirname(__file__), "gps_feeder.py")
+        if os.path.exists(feeder_script):
+            dev_arg = ["-s", device] if device else []
+            subprocess.run([sys.executable, feeder_script, "--once", "--timeout", "3"] + dev_arg, timeout=6)
+    except Exception as e:
+        print(f"  [GPS] Nota: {e}")
+
 def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, device: str = None):
     print("=" * 60)
     print("  INICIANDO FLUJO DE CHECK-IN WORKBEAT SUPERAPP")
@@ -189,6 +199,10 @@ def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, devi
     print(f"  Dispositivo: {device or 'Por defecto'}")
     print(f"  Delay post-check: {delay}s")
     print("=" * 60)
+
+    # 0. Sincronizar GPS físico
+    print("\n[Paso 0] Sincronizando ubicación GPS físico (VK-162)...")
+    sync_gps_location(device)
 
     # 1. Despertar dispositivo
     print("\n[Paso 1] Despertando dispositivo y abriendo Workbeat...")

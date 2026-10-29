@@ -11,6 +11,10 @@ import time
 import os
 import socket
 
+# Forzar flush de salida estándar para visualización en tiempo real
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(line_buffering=True)
+
 def find_gps_port():
     candidates = [
         # Linux (Raspberry Pi / Orange Pi)
