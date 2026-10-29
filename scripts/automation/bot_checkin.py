@@ -120,12 +120,52 @@ def wait_and_tap(query: str = None, class_match: str = None, timeout: int = 10, 
 
 def hide_keyboard(device: str = None):
     run_adb(["shell", "input", "keyevent", "111"], device)  # KEYCODE_ESCAPE
+    time.sleep(0.3)
+    run_adb(["shell", "input", "keyevent", "4"], device)    # KEYCODE_BACK
     time.sleep(0.5)
 
 def type_text(text: str, device: str = None):
     # En ADB shell, la barra invertida \ debe escaparse como \\\\ para input text
     escaped = text.replace("\\", "\\\\")
     run_adb(["shell", "input", "text", f'"{escaped}"'], device)
+
+def ensure_geolocation_enabled(device: str = None) -> bool:
+    """Verifica si geolocalización está habilitada en Configuración avanzada.
+    Si la app muestra 'Debes compartir tu geolocalización', navega a Configuración avanzada
+    y activa el switch de geolocalización."""
+    root = dump_ui(device)
+    if not find_element_bounds(root, query="Debes compartir tu geolocalización"):
+        return True
+
+    print("  ⚠ Geolocalización no compartida en la app. Activando en 'Configuración avanzada'...")
+    # Ir a Mi Perfil
+    if not wait_and_tap(query="Mi Perfil", timeout=8, device=device):
+        return False
+    time.sleep(2)
+
+    # Ir a Configuración avanzada
+    if not wait_and_tap(query="Configuración avanzada", timeout=6, device=device):
+        return False
+    time.sleep(2)
+
+    # Localizar switch
+    root = dump_ui(device)
+    for elem in root.iter():
+        if "Switch" in elem.attrib.get("class", ""):
+            if elem.attrib.get("checked") == "false":
+                bounds = elem.attrib.get("bounds")
+                c = bounds_to_center(bounds)
+                run_adb(["shell", "input", "tap", str(c[0]), str(c[1])], device)
+                print("  ✓ Switch 'Compartir geolocalización' activado.")
+                time.sleep(1)
+            break
+    
+    # Regresar a perfil y luego a Explorar
+    wait_and_tap(query="Regresar", timeout=5, device=device)
+    time.sleep(1)
+    wait_and_tap(query="Explorar", timeout=5, device=device)
+    time.sleep(2)
+    return True
 
 def capture_screenshot(tag: str, screenshot_dir: str, device: str = None):
     os.makedirs(screenshot_dir, exist_ok=True)
@@ -230,9 +270,12 @@ def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, devi
     # Esperar a que el dashboard cargue
     for _ in range(10):
         root = dump_ui(device)
-        if find_element_bounds(root, query="Registrar checada") or find_element_bounds(root, query="Explorar"):
+        if find_element_bounds(root, query="Registrar checada") or find_element_bounds(root, query="Explorar") or find_element_bounds(root, query="Debes compartir"):
             break
         time.sleep(1)
+
+    # Verificar si se requiere activar geolocalización en Configuración avanzada
+    ensure_geolocation_enabled(device)
 
     capture_screenshot("04_dashboard_inicio", screenshot_dir, device)
 
