@@ -245,22 +245,24 @@ def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, devi
     # Pulsar Continuar
     print("  Avanzando al campo de contraseña...")
     wait_and_tap(query="Continuar", timeout=5, device=device)
-    time.sleep(2)
+    time.sleep(1)
 
     # 4. Ingresar Contraseña
-    print("\n[Paso 4] Ingresando contraseña...")
-    root = dump_ui(device)
-    # El campo de contraseña es el EditText que dice 'Contraseña' o el segundo EditText
+    print("\n[Paso 4] Esperando e ingresando contraseña...")
     bounds_pass = None
-    for elem in root.iter():
-        if "EditText" in elem.attrib.get("class", ""):
-            text = elem.attrib.get("text", "")
-            if "contraseña" in text.lower() or text == "" or "••••" in text:
-                bounds_pass = elem.attrib.get("bounds")
-                break
-    
-    if not bounds_pass:
-        bounds_pass = find_element_bounds(root, query="Contraseña")
+    for _ in range(12):
+        root = dump_ui(device)
+        for elem in root.iter():
+            if "EditText" in elem.attrib.get("class", ""):
+                text = elem.attrib.get("text", "")
+                if "contraseña" in text.lower() or "••••" in text:
+                    bounds_pass = elem.attrib.get("bounds")
+                    break
+        if not bounds_pass:
+            bounds_pass = find_element_bounds(root, query="Contraseña")
+        if bounds_pass:
+            break
+        time.sleep(1)
 
     if bounds_pass:
         center = bounds_to_center(bounds_pass)
@@ -271,6 +273,8 @@ def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, devi
         time.sleep(1)
         hide_keyboard(device)
         capture_screenshot("03_password_ingresado", screenshot_dir, device)
+    else:
+        print("  ⚠ No se detectó campo de contraseña tras la espera.")
 
     # Pulsar Continuar (Iniciar Sesión)
     print("  Iniciando sesión...")
