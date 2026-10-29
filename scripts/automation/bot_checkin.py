@@ -119,10 +119,14 @@ def wait_and_tap(query: str = None, class_match: str = None, timeout: int = 10, 
     return False
 
 def hide_keyboard(device: str = None):
-    run_adb(["shell", "input", "keyevent", "111"], device)  # KEYCODE_ESCAPE
-    time.sleep(0.3)
-    run_adb(["shell", "input", "keyevent", "4"], device)    # KEYCODE_BACK
-    time.sleep(0.5)
+    res = run_adb(["shell", "dumpsys", "input_method"], device)
+    if "mInputShown=true" in res:
+        run_adb(["shell", "input", "keyevent", "111"], device)  # KEYCODE_ESCAPE
+        time.sleep(0.3)
+        res2 = run_adb(["shell", "dumpsys", "input_method"], device)
+        if "mInputShown=true" in res2:
+            run_adb(["shell", "input", "keyevent", "4"], device)    # KEYCODE_BACK
+        time.sleep(0.3)
 
 def type_text(text: str, device: str = None):
     # En ADB shell, la barra invertida \ debe escaparse como \\\\ para input text
@@ -239,9 +243,8 @@ def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, devi
         center = bounds_to_center(bounds_user)
         run_adb(["shell", "input", "tap", str(center[0]), str(center[1])], device)
         time.sleep(0.5)
-        # Limpiar texto previo
-        for _ in range(30):
-            run_adb(["shell", "input", "keyevent", "67"], device)  # KEYCODE_DEL
+        # Limpiar texto previo rápidamente en un solo comando
+        run_adb(["shell", "input", "keyevent"] + ["67"] * 30, device)
         type_text(user, device)
         print(f"  ✓ Usuario '{user}' ingresado.")
         time.sleep(1)
