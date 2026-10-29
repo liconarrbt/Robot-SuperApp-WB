@@ -130,7 +130,7 @@ def type_text(text: str, device: str = None):
 def capture_screenshot(tag: str, screenshot_dir: str, device: str = None):
     os.makedirs(screenshot_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    remote_path = f"/sdcard/screen_{timestamp}.png"
+    remote_path = f"/data/local/tmp/screen_{timestamp}.png"
     local_path = os.path.join(screenshot_dir, f"{tag}_{timestamp}.png")
     run_adb(["shell", "screencap", "-p", remote_path], device)
     
