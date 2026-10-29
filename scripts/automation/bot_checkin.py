@@ -182,27 +182,32 @@ def capture_screenshot(tag: str, screenshot_dir: str, device: str = None):
     print(f"  [📸 Captura] Guardada en: {local_path}")
     return local_path
 
-def sync_gps_location(device: str = None):
-    """Inyecta la última posición del GPS físico o gpsd hacia ReDroid."""
+def sync_gps_location(lat: float = None, lon: float = None, device: str = None):
+    """Inyecta coordenadas fijas (mock) o sincroniza la última posición del GPS físico hacia ReDroid."""
     try:
         feeder_script = os.path.join(os.path.dirname(__file__), "gps_feeder.py")
         if os.path.exists(feeder_script):
             dev_arg = ["-s", device] if device else []
-            subprocess.run([sys.executable, feeder_script, "--once", "--timeout", "3"] + dev_arg, timeout=6)
+            if lat is not None and lon is not None:
+                subprocess.run([sys.executable, feeder_script, "--lat", str(lat), "--lon", str(lon), "--once"] + dev_arg, timeout=6)
+            else:
+                subprocess.run([sys.executable, feeder_script, "--once", "--timeout", "3"] + dev_arg, timeout=6)
     except Exception as e:
         print(f"  [GPS] Nota: {e}")
 
-def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, device: str = None):
+def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, device: str = None, lat: float = None, lon: float = None):
     print("=" * 60)
     print("  INICIANDO FLUJO DE CHECK-IN WORKBEAT SUPERAPP")
     print(f"  Usuario: {user}")
     print(f"  Dispositivo: {device or 'Por defecto'}")
     print(f"  Delay post-check: {delay}s")
+    if lat and lon:
+        print(f"  Ubicación objetivo: Lat={lat}, Lon={lon}")
     print("=" * 60)
 
-    # 0. Sincronizar GPS físico
-    print("\n[Paso 0] Sincronizando ubicación GPS físico (VK-162)...")
-    sync_gps_location(device)
+    # 0. Sincronizar GPS físico o mockup
+    print("\n[Paso 0] Sincronizando ubicación GPS...")
+    sync_gps_location(lat=lat, lon=lon, device=device)
 
     # 1. Despertar dispositivo
     print("\n[Paso 1] Despertando dispositivo y abriendo Workbeat...")
@@ -339,6 +344,8 @@ def main():
     parser.add_argument("-d", "--delay", type=int, help="Segundos de espera post-checada")
     parser.add_argument("-s", "--device", type=str, help="ID/Serial del dispositivo ADB")
     parser.add_argument("--screenshot-dir", type=str, default=DEFAULT_SCREENSHOT_DIR, help="Carpeta para guardar capturas")
+    parser.add_argument("--lat", type=float, help="Latitud específica o mock")
+    parser.add_argument("--lon", type=float, help="Longitud específica o mock")
     args = parser.parse_args()
 
     # Cargar archivo de configuración
@@ -353,6 +360,8 @@ def main():
     password = args.password or cfg.get("PASS") or os.getenv("WORKBEAT_PASS")
     delay = args.delay if args.delay is not None else int(cfg.get("SCREENSHOT_DELAY", 5))
     screenshot_dir = args.screenshot_dir
+    lat = args.lat if args.lat is not None else (float(cfg["LAT"]) if "LAT" in cfg else None)
+    lon = args.lon if args.lon is not None else (float(cfg["LON"]) if "LON" in cfg else None)
 
     if not user or not password:
         print("ERROR: Debe proporcionar usuario y contraseña.")
@@ -367,7 +376,7 @@ def main():
         sys.exit(1)
 
     device = args.device or devices[0]
-    execute_flow(user=user, password=password, delay=delay, screenshot_dir=screenshot_dir, device=device)
+    execute_flow(user=user, password=password, delay=delay, screenshot_dir=screenshot_dir, device=device, lat=lat, lon=lon)
 
 if __name__ == "__main__":
     main()
