@@ -227,8 +227,14 @@ def execute_flow(user: str, password: str, delay: int, screenshot_dir: str, devi
 
     # 3. Ingresar Usuario
     print("\n[Paso 3] Ingresando usuario...")
-    root = dump_ui(device)
-    bounds_user = find_element_bounds(root, class_match="android.widget.EditText")
+    bounds_user = None
+    for _ in range(10):
+        root = dump_ui(device)
+        bounds_user = find_element_bounds(root, class_match="android.widget.EditText")
+        if bounds_user:
+            break
+        time.sleep(1)
+
     if bounds_user:
         center = bounds_to_center(bounds_user)
         run_adb(["shell", "input", "tap", str(center[0]), str(center[1])], device)
