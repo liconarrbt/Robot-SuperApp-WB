@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 """
 Test VK-162 USB GPS (u-blox 7)
-Lee sentencias NMEA desde el puerto serie USB e imprime la posición en tiempo real.
+Lee sentencias NMEA y coordenadas en tiempo real.
+Soporta conexión transparente vía daemon gpsd (puerto 2947) o puerto serie directo (/dev/ttyACM0 /dev/gps_vk162).
 """
 
 import sys
 import glob
 import time
 import os
+import socket
 
 def find_gps_port():
     candidates = [
+        # Linux (Raspberry Pi / Orange Pi)
+        '/dev/gps_vk162',
+        '/dev/ttyACM0',
+        '/dev/ttyACM1',
+        '/dev/ttyUSB0',
         # macOS
         '/dev/cu.usbmodem*',
         '/dev/tty.usbmodem*',
-        '/dev/cu.usbserial*',
-        '/dev/tty.usbserial*',
-        # Linux (Orange Pi)
-        '/dev/gps_vk162',
-        '/dev/ttyACM*',
-        '/dev/ttyUSB*'
+        '/dev/cu.usbserial*'
     ]
     for pattern in candidates:
         matches = glob.glob(pattern)
@@ -34,7 +36,6 @@ def parse_nmea_sentence(line: str):
     # Manejar GGA (Fix data)
     if sentence_type in ['$GPGGA', '$GNGGA']:
         try:
-            utc_time = parts[1]
             lat_raw = parts[2]
             lat_dir = parts[3]
             lon_raw = parts[4]
@@ -67,21 +68,56 @@ def parse_nmea_sentence(line: str):
     elif sentence_type in ['$GPRMC', '$GNRMC']:
         try:
             status = parts[2]  # A=Active/Valid, V=Void/Invalid
+            lat_raw = parts[3]
+            lat_dir = parts[4]
+            lon_raw = parts[5]
+            lon_dir = parts[6]
             speed_knots = parts[7] if len(parts) > 7 and parts[7] else "0.0"
             speed_kmh = float(speed_knots) * 1.852
-            if status == 'A':
-                return f"[{sentence_type}] Señal: VÁLIDA (Fix confirmado) | Velocidad: {speed_kmh:.2f} km/h"
+
+            if lat_raw and lon_raw:
+                lat_deg = float(lat_raw[:2]) + float(lat_raw[2:]) / 60.0
+                if lat_dir == 'S': lat_deg = -lat_deg
+                lon_deg = float(lon_raw[:3]) + float(lon_raw[3:]) / 60.0
+                if lon_dir == 'W': lon_deg = -lon_deg
+                pos_str = f" | Posición: {lat_deg:.6f}, {lon_deg:.6f}"
             else:
-                return f"[{sentence_type}] Señal: Buscando satélites..."
+                pos_str = ""
+
+            if status == 'A':
+                return f"[{sentence_type}] Señal: VÁLIDA (Fix confirmado){pos_str} | Velocidad: {speed_kmh:.2f} km/h"
+            else:
+                return f"[{sentence_type}] Señal: Sincronizando satélites...{pos_str}"
         except (IndexError, ValueError):
             pass
 
     return None
 
-def read_gps_stream(port: str):
-    print(f"--> Abriendo puerto GPS: {port}...")
-    
-    # Intentar con pyserial si está instalado, sino usar lectura nativa POSIX
+def read_via_gpsd():
+    """Conecta a gpsd en localhost:2947 para evitar colisión de puertos."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2.0)
+        sock.connect(('127.0.0.1', 2947))
+        sock.sendall(b'?WATCH={"enable":true,"nmea":true}\n')
+        f = sock.makefile()
+        print("--> Conectado mediante servicio gpsd (puerto 2947).")
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            line = line.strip()
+            if line.startswith('$'):
+                parsed = parse_nmea_sentence(line)
+                if parsed:
+                    print(parsed)
+        return True
+    except Exception:
+        return False
+
+def read_gps_serial(port: str):
+    """Lectura serie directa si gpsd no está activo."""
+    print(f"--> Abriendo puerto serie: {port}...")
     try:
         import serial
         ser = serial.Serial(port, baudrate=9600, timeout=1.0)
@@ -93,41 +129,28 @@ def read_gps_stream(port: str):
             parsed = parse_nmea_sentence(line)
             if parsed:
                 print(parsed)
-    except ImportError:
-        print("--> pySerial no instalado. Usando lectura directa POSIX (termios/os)...")
-        fd = os.open(port, os.O_RDONLY | os.O_NOCTTY)
-        buffer = b''
-        try:
-            while True:
-                chunk = os.read(fd, 256)
-                if not chunk:
-                    time.sleep(0.05)
-                    continue
-                buffer += chunk
-                if b'\n' in buffer:
-                    lines = buffer.split(b'\n')
-                    buffer = lines[-1]
-                    for raw_line in lines[:-1]:
-                        line = raw_line.decode('ascii', errors='replace').strip()
-                        parsed = parse_nmea_sentence(line)
-                        if parsed:
-                            print(parsed)
-        finally:
-            os.close(fd)
+    except Exception as e:
+        print(f"ERROR abriendo puerto serie: {e}")
+        print("Tip: Si gpsd está corriendo, ejecuta: sudo systemctl stop gpsd gpsd.socket")
 
 def main():
+    print(f"==================================================")
+    print(f"  Test de Diagnóstico GPS VK-162 (u-blox 7)")
+    print(f"==================================================")
+
+    # 1. Probar primero si gpsd está escuchando
+    if read_via_gpsd():
+        return
+
+    # 2. Si no hay gpsd, intentar puerto directo
     port = sys.argv[1] if len(sys.argv) > 1 else find_gps_port()
     if not port:
         print("ERROR: No se encontró ningún puerto serie para el GPS.")
-        print("En Mac se espera /dev/cu.usbmodem*, en Linux /dev/ttyACM* o /dev/ttyUSB*.")
         sys.exit(1)
-        
-    print(f"==================================================")
-    print(f"  Test de Diagnóstico GPS VK-162 (u-blox 7)")
-    print(f"  Dispositivo detectado: {port}")
-    print(f"==================================================")
+
+    print(f"Dispositivo detectado: {port}")
     try:
-        read_gps_stream(port)
+        read_gps_serial(port)
     except KeyboardInterrupt:
         print("\nPrueba finalizada por el usuario.")
 
