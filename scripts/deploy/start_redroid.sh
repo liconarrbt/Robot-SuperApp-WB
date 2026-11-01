@@ -11,6 +11,23 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
+# Asegurar directorios requeridos
+mkdir -p "$PROJECT_ROOT/data" "$PROJECT_ROOT/empty_xbin" "$PROJECT_ROOT/Screenshots-Temp"
+
+# Verificar dispositivo GPS antes de iniciar Docker
+if [ ! -e /dev/ttyACM0 ]; then
+    if [ -e /dev/ttyUSB0 ]; then
+        echo "⚠ /dev/ttyACM0 no encontrado, pero se detectó /dev/ttyUSB0. Creando enlace simbólico..."
+        sudo ln -sf /dev/ttyUSB0 /dev/ttyACM0 2>/dev/null || true
+    elif [ -e /dev/gps_vk162 ]; then
+        echo "⚠ /dev/ttyACM0 no encontrado, pero se detectó /dev/gps_vk162. Creando enlace simbólico..."
+        sudo ln -sf /dev/gps_vk162 /dev/ttyACM0 2>/dev/null || true
+    else
+        echo "⚠ ADVERTENCIA: No se detectó /dev/ttyACM0 ni GPS USB conectado."
+        echo "  Si docker compose falla con 'no such file or directory', conecta el GPS VK-162."
+    fi
+fi
+
 echo "==> Iniciando contenedor redroid-gps..."
 docker compose up -d
 
