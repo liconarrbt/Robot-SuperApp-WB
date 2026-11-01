@@ -30,6 +30,9 @@ android_data/
 credentials.json
 .env
 
+# Binaries
+dummy_lmkd
+
 # Screenshots
 Screenshots-Temp/*
 !Screenshots-Temp/.gitkeep

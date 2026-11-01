@@ -14,6 +14,12 @@ cd "$PROJECT_ROOT"
 # Asegurar directorios requeridos
 mkdir -p "$PROJECT_ROOT/data" "$PROJECT_ROOT/empty_xbin" "$PROJECT_ROOT/Screenshots-Temp"
 
+# Compilar dummy_lmkd si no existe
+if [ ! -f "$PROJECT_ROOT/dummy_lmkd" ] && [ -f "$PROJECT_ROOT/scripts/dummy_lmkd.c" ]; then
+    echo "==> Compilando dummy_lmkd para compatibilidad de memoria..."
+    gcc -static -O2 -o "$PROJECT_ROOT/dummy_lmkd" "$PROJECT_ROOT/scripts/dummy_lmkd.c"
+fi
+
 # Verificar dispositivo GPS antes de iniciar Docker
 if [ ! -e /dev/ttyACM0 ]; then
     if [ -e /dev/ttyUSB0 ]; then

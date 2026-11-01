@@ -166,7 +166,22 @@ fi
 echo ""
 echo "=== [6/6] Dependencias del Host y Docker ==="
 sudo apt-get update -qq
-sudo apt-get install -y -qq adb python3 python3-pip python3-venv minicom gpsd-clients curl git 2>/dev/null || true
+sudo apt-get install -y -qq adb python3 python3-pip python3-venv minicom gpsd gpsd-clients build-essential curl git 2>/dev/null || true
+
+# Configurar gpsd si está disponible
+if [ -f /etc/default/gpsd ]; then
+    sudo sh -c 'echo "START_DAEMON=\"true\"
+DEVICES=\"/dev/ttyACM0\"
+GPSD_OPTIONS=\"-n\"
+USBAUTO=\"true\"" > /etc/default/gpsd'
+    sudo systemctl restart gpsd.socket gpsd.service 2>/dev/null || true
+fi
+
+# Compilar dummy_lmkd para compatibilidad con kernels sin PSI/cgroup v1 LMK
+if [ -f "$PROJECT_ROOT/scripts/dummy_lmkd.c" ]; then
+    echo "-> Compilando dummy_lmkd para compatibilidad con ReDroid..."
+    gcc -static -O2 -o "$PROJECT_ROOT/dummy_lmkd" "$PROJECT_ROOT/scripts/dummy_lmkd.c" 2>/dev/null || true
+fi
 
 # Verificar / instalar Docker
 if ! command -v docker &> /dev/null; then

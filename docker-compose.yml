@@ -9,6 +9,7 @@ services:
     volumes:
       - ./data:/data
       - ./empty_xbin:/system/xbin:ro
+      - ./dummy_lmkd:/system/bin/lmkd:ro
     devices:
       # VK-162 USB GPS passthrough
       - /dev/ttyACM0:/dev/ttyACM0:rwm
@@ -17,6 +18,8 @@ services:
       - androidboot.redroid_height=1280
       - androidboot.redroid_dpi=320
       - androidboot.redroid_gpu_mode=guest
+      - androidboot.use_memfd=true
+      - ro.lmk.use_psi=false
       # Habilitar soporte GPS serial en el kernel/AOSP HAL si está disponible
       - ro.kernel.android.gps=ttyACM0
       - ro.kernel.android.gps.speed=9600
